@@ -1,0 +1,10 @@
+{
+  "name": "Operación Cuba: Crisis de 1962",
+  "short_name": "Operación Cuba",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#071021",
+  "theme_color": "#091827",
+  "description": "Juego educativo sobre la Crisis de los Misiles de 1962",
+  "icons": []
+}
