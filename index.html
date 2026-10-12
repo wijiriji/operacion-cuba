@@ -1,0 +1,854 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Operación Cuba</title>
+  <style>
+    :root {
+      --bg: #071021;
+      --panel: #0c1a2a;
+      --tile: #2d3d4c;
+      --tile-revealed: #edf4fb;
+      --text: #edf6ff;
+      --muted: #bfd2ea;
+      --accent: #e06c75;
+      --danger: #ff6b6b;
+      --flag: #ffd166;
+      --ok: #9fd3c7;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: linear-gradient(180deg, #071021 0%, #0d1a2d 100%);
+      color: var(--text);
+      font-family: Arial, sans-serif;
+    }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+    .container {
+      width: min(1000px, 100%);
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      gap: 18px;
+    }
+    .panel {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 12px 30px rgba(0,0,0,.35);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.5rem, 2vw, 2rem);
+      color: var(--accent);
+    }
+    .subtitle {
+      margin: 0 0 12px;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: .9rem;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .stat {
+      background: rgba(255,255,255,0.02);
+      border-radius: 10px;
+      padding: 10px 12px;
+      min-height: 78px;
+    }
+    .label {
+      color: var(--muted);
+      font-size: .7rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .value {
+      display: block;
+      margin-top: 6px;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+    .progress {
+      margin-top: 8px;
+      height: 9px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .progress span {
+      display: block;
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #ffb085, #ff6b6b);
+      border-radius: inherit;
+    }
+    button {
+      appearance: none;
+      border: none;
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 4px 4px 0 0;
+    }
+    button.primary {
+      background: linear-gradient(135deg, #e06c75, #d44d5d);
+      color: #101820;
+    }
+    .log {
+      margin-top: 12px;
+      background: rgba(0,0,0,0.15);
+      border-radius: 10px;
+      padding: 10px 12px;
+      min-height: 160px;
+      max-height: 220px;
+      overflow: auto;
+      color: var(--muted);
+      font-size: .8rem;
+      line-height: 1.5;
+    }
+    .board-wrap {
+      background: linear-gradient(180deg, rgba(7,16,33,0.97), rgba(11,18,30,0.94));
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 520px;
+    }
+    #board {
+      display: grid;
+      gap: 6px;
+      grid-template-columns: repeat(10, 38px);
+      grid-template-rows: repeat(10, 38px);
+      justify-content: center;
+      align-content: center;
+      user-select: none;
+    }
+    .cell {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.04);
+      background: var(--tile);
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .cell.revealed {
+      background: var(--tile-revealed);
+      color: #0a1621;
+      cursor: default;
+    }
+    .cell.flag {
+      background: var(--flag);
+      color: #111;
+    }
+    .cell.danger {
+      background: linear-gradient(135deg, var(--danger), #c92548);
+      color: #fff;
+    }
+    .cell.doc {
+      background: linear-gradient(135deg, #f0d27d, #d3a000);
+      color: #111;
+    }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(0,0,0,0.6);
+      z-index: 50;
+    }
+    .modal {
+      width: min(720px, 92vw);
+      background: linear-gradient(180deg, #071d2d 0%, #0b1f2f 100%);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    }
+    .modal h2 {
+      margin: 0 0 10px;
+      color: var(--accent);
+    }
+    .modal p, .modal li, .modal label {
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .hidden { display: none !important; pointer-events: none !important; }
+    .end-summary {
+      margin-top: 8px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.02);
+      border-radius: 10px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    @media (max-width: 900px) {
+      .container { grid-template-columns: 1fr; }
+      .board-wrap { min-height: 420px; }
+      #board { grid-template-columns: repeat(10, 30px); grid-template-rows: repeat(10, 30px); }
+      .cell { width: 30px; height: 30px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="panel">
+      <h1>Operación Cuba</h1>
+      <p class="subtitle">Crisis de los Misiles de 1962. Localiza instalaciones, controla la tensión y responde el cuestionario final.</p>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="label">Tensión</div>
+          <span class="value" id="tensionValue">0 / 100</span>
+          <div class="progress"><span id="tensionBar"></span></div>
+        </div>
+        <div class="stat">
+          <div class="label">Tiempo</div>
+          <span class="value" id="timerValue">05:00</span>
+          <div id="livesValue" style="margin-top:8px; color: var(--muted); font-size: .8rem;">Oportunidades: 3</div>
+        </div>
+        <div class="stat">
+          <div class="label">Recursos</div>
+          <span class="value" id="resourcesValue">Fotos: 2 · Radar: 1</span>
+          <div id="teamValue" style="margin-top:8px; color: var(--muted); font-size: .8rem;">Ayuda del equipo: 1</div>
+        </div>
+        <div class="stat">
+          <div class="label">Puntuación</div>
+          <span class="value" id="scoreValue">0</span>
+          <div id="medalValue" style="margin-top:8px; color: var(--muted); font-size: .8rem;">Medalla: —</div>
+        </div>
+      </div>
+
+      <div>
+        <button id="startBtn" class="primary">Jugar</button>
+        <button id="howBtn">Cómo jugar</button>
+        <button id="historyBtn">Contexto</button>
+        <button id="recordsBtn">Récords</button>
+      </div>
+
+      <div id="logBox" class="log">Bienvenido. Clic izquierdo para revelar. Clic derecho para banderas.</div>
+    </aside>
+
+    <main class="panel">
+      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+        <button id="photoBtn">Usar fotografía</button>
+        <button id="radarBtn">Radar</button>
+        <button id="teamBtn">Ayuda del equipo</button>
+        <button id="revealBtn">Mostrar solución</button>
+        <button id="flagModeBtn">Modo bandera</button>
+        <button id="quizBtn" class="primary hidden">Desafío histórico</button>
+      </div>
+
+      <div class="board-wrap">
+        <div id="board" aria-label="Tablero del juego"></div>
+      </div>
+
+      <div id="endSummary" class="end-summary hidden"></div>
+    </main>
+  </div>
+
+  <div id="startScreen" class="modal-overlay">
+    <div class="modal">
+      <h2>Operación Cuba: Crisis de 1962</h2>
+      <p>Tu misión es localizar instalaciones sospechosas, controlar la tensión y responder a un breve test histórico final. Puedes jugar en móvil, tablet o portátil desde el navegador.</p>
+      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;">
+        <button id="startGameBtn" class="primary">Iniciar misión</button>
+        <button id="startHowBtn">Cómo jugar</button>
+        <button id="startHistoryBtn">Contexto</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalOverlay" class="modal-overlay hidden" aria-modal="true" role="dialog">
+    <div class="modal">
+      <h2 id="modalTitle">Información</h2>
+      <div id="modalBody"></div>
+      <div style="margin-top:16px; text-align:right;">
+        <button id="closeModalBtn" class="primary">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="quizOverlay" class="modal-overlay hidden" aria-modal="true" role="dialog">
+    <div class="modal">
+      <h2>Desafío histórico</h2>
+      <div id="quizBody"></div>
+      <div style="margin-top:16px; display:flex; justify-content:flex-end; gap:8px;">
+        <button id="closeQuizBtn">Cerrar</button>
+        <button id="submitQuizBtn" class="primary">Enviar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const CONFIG = {
+      rows: 10,
+      cols: 10,
+      missiles: 15,
+      lives: 3,
+      timeLimit: 300,
+      photos: 2,
+      radar: 1,
+      teamHelp: 1,
+      scoreBoard: {
+        revealSafe: 10,
+        findDoc: 30,
+        quizCorrect: 100,
+        missileHit: -50
+      }
+    };
+
+    const state = {
+      rows: CONFIG.rows,
+      cols: CONFIG.cols,
+      missiles: CONFIG.missiles,
+      lives: CONFIG.lives,
+      timeLimit: CONFIG.timeLimit,
+      photos: CONFIG.photos,
+      radar: CONFIG.radar,
+      teamHelp: CONFIG.teamHelp,
+      tension: 0,
+      score: 0,
+      board: [],
+      revealed: [],
+      flagged: [],
+      docs: new Set(),
+      startTime: null,
+      gameOver: false,
+      flagMode: false,
+      timerEnabled: true
+    };
+
+    const quizData = [
+      {
+        question: '¿Qué presidente de EE. UU. lideró la respuesta durante la crisis?',
+        options: ['Dwight D. Eisenhower', 'John F. Kennedy', 'Lyndon B. Johnson'],
+        answer: 1,
+        explanation: 'John F. Kennedy fue presidente durante la crisis de octubre de 1962.'
+      },
+      {
+        question: '¿Qué país desplegó misiles en Cuba?',
+        options: ['Unión Soviética', 'Reino Unido', 'China'],
+        answer: 0,
+        explanation: 'La Unión Soviética desplegó misiles nucleares en Cuba.'
+      },
+      {
+        question: '¿Qué fue clave para evitar una guerra nuclear?',
+        options: ['La invasión inmediata', 'La diplomacia y la negociación', 'Un bloqueo de productos'],
+        answer: 1,
+        explanation: 'La diplomacia y la negociación ayudaron a evitar una escalada militar.'
+      }
+    ];
+
+    function log(msg) {
+      const box = document.getElementById('logBox');
+      const row = document.createElement('div');
+      row.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      box.prepend(row);
+    }
+
+    function formatTime(sec) {
+      const total = Math.max(0, sec);
+      const m = String(Math.floor(total / 60)).padStart(2, '0');
+      const s = String(total % 60).padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    function randomBoard() {
+      state.board = Array.from({ length: state.rows }, () => Array(state.cols).fill(0));
+      state.revealed = Array.from({ length: state.rows }, () => Array(state.cols).fill(false));
+      state.flagged = Array.from({ length: state.rows }, () => Array(state.cols).fill(false));
+      state.docs = new Set();
+
+      const total = state.rows * state.cols;
+      const mines = new Set();
+      while (mines.size < state.missiles) mines.add(Math.floor(Math.random() * total));
+
+      for (const pos of mines) {
+        const r = Math.floor(pos / state.cols);
+        const c = pos % state.cols;
+        state.board[r][c] = 'M';
+      }
+
+      for (let r = 0; r < state.rows; r++) {
+        for (let c = 0; c < state.cols; c++) {
+          if (state.board[r][c] === 'M') continue;
+          let count = 0;
+          for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              if (dr === 0 && dc === 0) continue;
+              const rr = r + dr;
+              const cc = c + dc;
+              if (rr >= 0 && rr < state.rows && cc >= 0 && cc < state.cols && state.board[rr][cc] === 'M') count++;
+            }
+          }
+          state.board[r][c] = count;
+        }
+      }
+
+      const safe = [];
+      for (let r = 0; r < state.rows; r++) {
+        for (let c = 0; c < state.cols; c++) {
+          if (state.board[r][c] !== 'M') safe.push([r, c]);
+        }
+      }
+
+      const docCount = Math.min(5, Math.max(1, Math.floor((state.rows * state.cols) / 30)));
+      for (let i = 0; i < docCount; i++) {
+        const idx = Math.floor(Math.random() * safe.length);
+        const [r, c] = safe.splice(idx, 1)[0];
+        state.docs.add(`${r},${c}`);
+      }
+    }
+
+    function renderBoard() {
+      const boardEl = document.getElementById('board');
+      boardEl.innerHTML = '';
+      for (let r = 0; r < state.rows; r++) {
+        for (let c = 0; c < state.cols; c++) {
+          const cell = document.createElement('button');
+          cell.type = 'button';
+          cell.className = 'cell';
+          cell.dataset.r = String(r);
+          cell.dataset.c = String(c);
+          cell.setAttribute('aria-label', `Casilla ${r + 1}, ${c + 1}`);
+          cell.addEventListener('click', () => {
+            if (state.flagMode) toggleFlag(r, c);
+            else revealCell(r, c);
+          });
+          cell.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            toggleFlag(r, c);
+          });
+          boardEl.appendChild(cell);
+        }
+      }
+    }
+
+    function refreshBoardVisuals() {
+      const cells = document.querySelectorAll('.cell');
+      cells.forEach((cell) => {
+        const r = Number(cell.dataset.r);
+        const c = Number(cell.dataset.c);
+        const val = state.board[r][c];
+        cell.classList.remove('revealed', 'flag', 'danger', 'doc');
+        cell.textContent = '';
+
+        if (state.flagged[r][c]) {
+          cell.classList.add('flag');
+          cell.textContent = '⚑';
+          return;
+        }
+
+        if (!state.revealed[r][c]) return;
+
+        cell.classList.add('revealed');
+        if (val === 'M') {
+          cell.classList.add('danger');
+          cell.textContent = '☢';
+        } else if (state.docs.has(`${r},${c}`)) {
+          cell.classList.add('doc');
+          cell.textContent = '📄';
+        } else if (val === 0) {
+          cell.textContent = '';
+        } else {
+          cell.textContent = String(val);
+        }
+      });
+    }
+
+    function updateHUD() {
+      const elapsed = state.startTime ? Math.floor((Date.now() / 1000) - state.startTime) : 0;
+      const remaining = state.timerEnabled ? Math.max(0, state.timeLimit - elapsed) : null;
+      document.getElementById('tensionValue').textContent = `${state.tension} / 100`;
+      document.getElementById('tensionBar').style.width = `${state.tension}%`;
+      document.getElementById('timerValue').textContent = remaining === null ? '—:—' : formatTime(remaining);
+      document.getElementById('livesValue').textContent = `Oportunidades: ${state.lives}`;
+      document.getElementById('resourcesValue').textContent = `Fotos: ${state.photos} · Radar: ${state.radar}`;
+      document.getElementById('teamValue').textContent = `Ayuda del equipo: ${state.teamHelp}`;
+      document.getElementById('scoreValue').textContent = String(state.score);
+
+      let medal = '—';
+      if (state.score >= 1500) medal = 'Oro';
+      else if (state.score >= 800) medal = 'Plata';
+      else if (state.score >= 300) medal = 'Bronce';
+      document.getElementById('medalValue').textContent = `Medalla: ${medal}`;
+    }
+
+    function computePenalty() {
+      const base = 20;
+      let hidden = 0;
+      for (let r = 0; r < state.rows; r++) {
+        for (let c = 0; c < state.cols; c++) {
+          if (!state.revealed[r][c]) hidden++;
+        }
+      }
+      const factor = hidden < (state.rows * state.cols) * 0.3 ? 1.5 : 1;
+      return Math.round(base * factor);
+    }
+
+    function revealCell(r, c) {
+      if (state.gameOver || state.revealed[r][c] || state.flagged[r][c]) return;
+      state.revealed[r][c] = true;
+
+      if (state.board[r][c] === 'M') {
+        state.tension = Math.min(100, state.tension + computePenalty());
+        state.lives -= 1;
+        state.score += CONFIG.scoreBoard.missileHit;
+        log(`Instalación activada. +${computePenalty()} tensión. Oportunidades: ${state.lives}.`);
+        refreshBoardVisuals();
+        checkStatus();
+        updateHUD();
+        return;
+      }
+
+      state.score += CONFIG.scoreBoard.revealSafe;
+      if (state.docs.has(`${r},${c}`)) {
+        state.score += CONFIG.scoreBoard.findDoc;
+        state.docs.delete(`${r},${c}`);
+        log('Documento histórico encontrado.');
+      }
+
+      if (state.board[r][c] === 0) cascadeReveal(r, c);
+      refreshBoardVisuals();
+      checkStatus();
+      updateHUD();
+    }
+
+    function cascadeReveal(sr, sc) {
+      const queue = [{ r: sr, c: sc }];
+      while (queue.length) {
+        const { r, c } = queue.shift();
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            const rr = r + dr;
+            const cc = c + dc;
+            if (rr < 0 || rr >= state.rows || cc < 0 || cc >= state.cols) continue;
+            if (state.revealed[rr][cc] || state.flagged[rr][cc]) continue;
+            state.revealed[rr][cc] = true;
+            if (state.board[rr][cc] === 0) queue.push({ r: rr, c: cc });
+          }
+        }
+      }
+    }
+
+    function toggleFlag(r, c) {
+      if (state.gameOver || state.revealed[r][c]) return;
+      state.flagged[r][c] = !state.flagged[r][c];
+      refreshBoardVisuals();
+      log(state.flagged[r][c] ? 'Bandera colocada.' : 'Bandera quitada.');
+      updateHUD();
+    }
+
+    function usePhoto() {
+      if (state.gameOver) return;
+      if (state.photos <= 0) {
+        log('No quedan fotografías.');
+        return;
+      }
+      const options = [];
+      for (let r = 0; r < state.rows; r++) {
+        for (let c = 0; c < state.cols; c++) {
+          if (!state.revealed[r][c] && state.board[r][c] !== 'M') options.push([r, c]);
+        }
+      }
+      if (!options.length) {
+        log('No quedan casillas seguras.');
+        return;
+      }
+      state.photos -= 1;
+      const [r, c] = options[Math.floor(Math.random()*options.length)];
+      revealCell(r, c);
+      log('Fotografía aplicada.');
+      updateHUD();
+    }
+
+    function useRadar() {
+      if (state.gameOver) return;
+      if (state.radar <= 0) {
+        log('Radar no disponible.');
+        return;
+      }
+      state.radar -= 1;
+      const options = [];
+      for (let r = 0; r < state.rows; r++) {
+        for (let c = 0; c < state.cols; c++) {
+          if (!state.revealed[r][c]) options.push([r, c]);
+        }
+      }
+      if (!options.length) {
+        log('No hay zona para escanear.');
+        return;
+      }
+      const [r, c] = options[Math.floor(Math.random()*options.length)];
+      const temporary = [];
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          const rr = r + dr;
+          const cc = c + dc;
+          if (rr < 0 || rr >= state.rows || cc < 0 || cc >= state.cols) continue;
+          if (state.revealed[rr][cc]) continue;
+          const idx = rr * state.cols + cc;
+          const cell = document.querySelectorAll('.cell')[idx];
+          if (!cell) continue;
+          const original = cell.textContent;
+          const value = state.board[rr][cc];
+          cell.textContent = value === 'M' ? '??' : (value === 0 ? '' : String(value));
+          temporary.push({ cell, original });
+        }
+      }
+      log(`Radar activado cerca de ${r + 1}, ${c + 1}.`);
+      setTimeout(() => temporary.forEach(({ cell, original }) => { cell.textContent = original || ''; }), 2200);
+      updateHUD();
+    }
+
+    function useTeamHelp() {
+      if (state.gameOver) return;
+      if (state.teamHelp <= 0) {
+        log('Equipo sin ayuda disponible.');
+        return;
+      }
+      state.teamHelp -= 1;
+      const rows = Math.max(2, Math.floor(state.rows / 3));
+      const cols = Math.max(2, Math.floor(state.cols / 3));
+      const startR = Math.floor(Math.random() * (state.rows - rows + 1));
+      const startC = Math.floor(Math.random() * (state.cols - cols + 1));
+      let count = 0;
+      for (let r = startR; r < startR + rows; r++) {
+        for (let c = startC; c < startC + cols; c++) {
+          if (state.board[r][c] === 'M') count++;
+        }
+      }
+      log(`Equipo: ${count} instalaciones en la zona ${startR + 1}-${startR + rows}, ${startC + 1}-${startC + cols}.`);
+      updateHUD();
+    }
+
+    function revealAllSolution() {
+      if (state.gameOver) return;
+      state.gameOver = true;
+      const cells = document.querySelectorAll('.cell');
+      cells.forEach((cell) => {
+        const r = Number(cell.dataset.r);
+        const c = Number(cell.dataset.c);
+        const value = state.board[r][c];
+        cell.classList.add('revealed');
+        if (value === 'M') {
+          cell.classList.add('danger');
+          cell.textContent = '☢';
+        } else {
+          cell.textContent = value === 0 ? '' : String(value);
+        }
+      });
+      log('Solución mostrada. Misión finalizada.');
+    }
+
+    function openModal(title, html) {
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalBody').innerHTML = html;
+      document.getElementById('modalOverlay').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('modalOverlay').classList.add('hidden');
+    }
+
+    function showHow() {
+      openModal('Cómo jugar', `
+        <p>1. Revela casillas con clic izquierdo.</p>
+        <p>2. Usa números para deducir zonas cercanas a instalaciones.</p>
+        <p>3. Marca casillas con banderas con clic derecho o modo bandera.</p>
+        <p>4. Usa fotografía, radar y equipo para ayudarte.</p>
+        <p>5. Si la tensión llega a 100 o se te acaban las oportunidades, pierdes.</p>
+      `);
+    }
+
+    function showHistory() {
+      openModal('Contexto histórico', `
+        <p>En octubre de 1962, la detección de misiles soviéticos en Cuba llevó a una crisis global.</p>
+        <p>Estados Unidos reaccionó con presión naval y diplomática, mientras la Unión Soviética buscaba una salida negociada.</p>
+        <p>Se evitó un conflicto nuclear gracias a la diplomacia, la negociación y la prudencia.</p>
+      `);
+    }
+
+    function showRecords() {
+      const records = JSON.parse(localStorage.getItem('operacion_cuba_records') || '[]');
+      const items = records.length ? records.map((r, i) => `<li>${i + 1}. ${r.score} puntos — ${r.date}</li>`).join('') : '<li>Aún no hay récords.</li>';
+      openModal('Récords', `<ol>${items}</ol>`);
+    }
+
+    function openQuiz() {
+      const body = document.getElementById('quizBody');
+      body.innerHTML = '';
+      quizData.forEach((item, index) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'question';
+        wrap.innerHTML = `<strong>${index + 1}. ${item.question}</strong>`;
+        const answers = document.createElement('div');
+        answers.style.display = 'flex';
+        answers.style.flexDirection = 'column';
+        answers.style.gap = '8px';
+        answers.style.marginTop = '8px';
+        item.options.forEach((opt, optIndex) => {
+          const label = document.createElement('label');
+          label.innerHTML = `<input type="radio" name="q${index}" value="${optIndex}" /> ${opt}`;
+          answers.appendChild(label);
+        });
+        wrap.appendChild(answers);
+        body.appendChild(wrap);
+      });
+      document.getElementById('quizOverlay').classList.remove('hidden');
+    }
+
+    function closeQuiz() {
+      document.getElementById('quizOverlay').classList.add('hidden');
+    }
+
+    function submitQuiz() {
+      const questions = document.querySelectorAll('#quizBody .question');
+      let correct = 0;
+      questions.forEach((question, idx) => {
+        const selected = question.querySelector(`input[name="q${idx}"]:checked`);
+        const expected = quizData[idx].answer;
+        if (selected && Number(selected.value) === expected) {
+          correct++;
+          state.score += CONFIG.scoreBoard.quizCorrect;
+          question.insertAdjacentHTML('beforeend', `<div style="margin-top:8px; color: var(--ok);">Correcto. ${quizData[idx].explanation}</div>`);
+        } else {
+          question.insertAdjacentHTML('beforeend', `<div style="margin-top:8px; color: var(--muted);">Incorrecto. ${quizData[idx].explanation}</div>`);
+        }
+      });
+      closeQuiz();
+      finishMission(true, `Desafío histórico completado. Respuestas correctas: ${correct}/${quizData.length}.`);
+    }
+
+    function finishMission(victory, reason) {
+      state.gameOver = true;
+      const summary = document.getElementById('endSummary');
+      summary.classList.remove('hidden');
+      summary.innerHTML = `
+        <div style="font-size:1.1rem; font-weight:800; color:${victory ? '#9fd3c7' : '#ffb7b7'}; margin-bottom:8px;">${victory ? '¡Operación completada!' : 'Misión fallida'}</div>
+        <div>${reason}</div>
+        <div>Puntuación final: ${state.score}</div>
+        <div>Tensión final: ${state.tension}</div>
+      `;
+      updateHUD();
+      log(reason);
+    }
+
+    function checkStatus() {
+      if (state.gameOver) return;
+      if (state.tension >= 100) {
+        finishMission(false, 'La tensión alcanzó el máximo. La misión falló.');
+      }
+      if (state.lives <= 0) {
+        finishMission(false, 'Se agotaron las oportunidades. La misión falló.');
+      }
+
+      let safeRemaining = 0;
+      for (let r = 0; r < state.rows; r++) {
+        for (let c = 0; c < state.cols; c++) {
+          if (state.board[r][c] !== 'M' && !state.revealed[r][c]) safeRemaining++;
+        }
+      }
+      if (safeRemaining === 0) {
+        document.getElementById('quizBtn').classList.remove('hidden');
+        log('Tablero casi resuelto. Puedes completar el desafío histórico.');
+      }
+    }
+
+    function startNewGame() {
+      state.lives = CONFIG.lives;
+      state.photos = CONFIG.photos;
+      state.radar = CONFIG.radar;
+      state.teamHelp = CONFIG.teamHelp;
+      state.tension = 0;
+      state.score = 0;
+      state.startTime = Date.now() / 1000;
+      state.gameOver = false;
+      state.flagMode = false;
+      document.getElementById('flagModeBtn').textContent = 'Modo bandera';
+      document.getElementById('quizBtn').classList.add('hidden');
+      document.getElementById('endSummary').classList.add('hidden');
+      document.getElementById('startScreen').classList.add('hidden');
+      randomBoard();
+      renderBoard();
+      refreshBoardVisuals();
+      updateHUD();
+      log('Misión activada. Busca instalaciones ocultas y evita la escalada.');
+    }
+
+    function gameLoop() {
+      if (!state.gameOver && state.timerEnabled) {
+        const elapsed = Math.floor((Date.now() / 1000) - state.startTime);
+        if (elapsed >= state.timeLimit) finishMission(false, 'Se agotó el tiempo.');
+      }
+      if (!state.gameOver && Math.random() < 0.004) {
+        state.tension = Math.min(100, state.tension + 1);
+      }
+      if (!state.gameOver && state.tension >= 100) {
+        finishMission(false, 'La tensión alcanzó el máximo. La crisis escalaron.');
+      }
+      updateHUD();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function toggleFlagMode() {
+      state.flagMode = !state.flagMode;
+      document.getElementById('flagModeBtn').textContent = state.flagMode ? 'Modo bandera: ON' : 'Modo bandera';
+      log(state.flagMode ? 'Modo bandera activado.' : 'Modo bandera desactivado.');
+    }
+
+    document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    document.getElementById('startBtn').addEventListener('click', startNewGame);
+    document.getElementById('startGameBtn').addEventListener('click', startNewGame);
+    document.getElementById('howBtn').addEventListener('click', showHow);
+    document.getElementById('startHowBtn').addEventListener('click', showHow);
+    document.getElementById('historyBtn').addEventListener('click', showHistory);
+    document.getElementById('startHistoryBtn').addEventListener('click', showHistory);
+    document.getElementById('recordsBtn').addEventListener('click', showRecords);
+    document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+    document.getElementById('photoBtn').addEventListener('click', usePhoto);
+    document.getElementById('radarBtn').addEventListener('click', useRadar);
+    document.getElementById('teamBtn').addEventListener('click', useTeamHelp);
+    document.getElementById('revealBtn').addEventListener('click', revealAllSolution);
+    document.getElementById('flagModeBtn').addEventListener('click', toggleFlagMode);
+    document.getElementById('quizBtn').addEventListener('click', openQuiz);
+    document.getElementById('closeQuizBtn').addEventListener('click', closeQuiz);
+    document.getElementById('submitQuizBtn').addEventListener('click', submitQuiz);
+
+    window.addEventListener('load', () => {
+      randomBoard();
+      renderBoard();
+      refreshBoardVisuals();
+      updateHUD();
+      log('Bienvenido. Clic izquierdo para revelar. Clic derecho para banderas.');
+      requestAnimationFrame(gameLoop);
+      if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+    });
+  </script>
+</body>
+</html>
